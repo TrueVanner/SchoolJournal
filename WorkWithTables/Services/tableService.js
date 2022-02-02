@@ -59,11 +59,11 @@ class TableService {
         const journal = new ExcelJS.Workbook();
         params.subjects.forEach(s => {
             const ws = journal.addWorksheet(s);
-            ws.getRow(1).values = this.dateCheck(now.getDate(), now.getMonth() + 1, 14);
+            ws.getRow(1).values = this.dateCheck(now.getDate(), now.getMonth() + 1, params.size);
             ws.getColumn(1).values = params.students;
         });
 
-        journal.xlsx.writeFile(`${name}.xlsx`);
+        await journal.xlsx.writeFile(`${name}.xlsx`);
         var body;
 
         //var client = http.createClient()
@@ -83,7 +83,7 @@ class TableService {
         //     console.log(res);
         // })
 
-        const options = {
+       /* const options = {
             hostname: 'localhost',
             port: 3000,
             path: '/auth/login',
@@ -104,22 +104,37 @@ class TableService {
             })
           });
 
-          req.end();   
+          req.end();   */
     }
 
     async setMark(journalName, subject, student, mark) {
         const journal = new ExcelJS.Workbook;
-        journal.xlsx.readFile(journalName);
+        // journal.xlsx.readFile(`${journalName}.xlsx`);
+        journal.xlsx.readFile("C:/Users/the_best/Desktop/Enterprise Developer/SchoolJournal/WorkWithTables/test.xlsx").then(() => {
+            console.log(journal.title);
 
         journal.worksheets.forEach(ws => {
             if (ws.name == subject) {
                 ws.getColumn(1).eachCell((cell) => {
                     if (cell.text == student) {
-                        ws.getRow(cell.row).getCell(ws.getRow(1).)
+                        ws.getRow(cell.row).eachCell((cell) => {
+                            if (cell.text.substring(0,2).includes(new Date().getDay())) {
+                                cell.text = mark;
+                                
+                                journal.xlsx.writeFile(`${journalName}.xlsx`); //remove later, here just for tests
+
+                                return {
+                                    res: "Mark set successfully!"
+                                }
+                            }
+                        })
                     }
-                })
+                });
+                throw new Error("This student does not exist!");
             }
         });
+        throw new Error("This page does not exist!");
+        })
     }
 
     /*async login(userType) {

@@ -1,4 +1,4 @@
-// module.exports = (req, res, next) => {
+module.exports = (req, res, next) => {
 //     try {
 //         const authHeader = req.headers.authorization;
 //         if(!authHeader) throw new Error("Auth header is empty!");
@@ -13,3 +13,5 @@
 //         next();
 //     } catch (e) {return next(e);}
 // }
+
+next();}

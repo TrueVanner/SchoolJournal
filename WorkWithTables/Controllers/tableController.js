@@ -8,6 +8,14 @@ class TableController {
             return res.json({result});
         } catch (e) {next(e);}
     }
+    
+    async setMark(req, res, next) {
+        try {
+            const {subject, student, mark} = req.body;
+            const result = await tableService.setMark(req.query.journal_name, subject, student, mark);
+            return res.json({result});
+        } catch (e) {next(e);}
+    }
 
     /*
     async login(req, res, next) {
