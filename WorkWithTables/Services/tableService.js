@@ -24,6 +24,11 @@ class TableService {
         return res;
     }
 
+    initWorkbook(name) {
+        const wb = new ExcelJS.Workbook;
+        return wb.xlsx.readFile(process.env.JOURNAL_DIRECTORY + name + ".xlsx");
+    }
+
     async create(name, params) {
         if (!name) name = "Journal"
         if (!params) {
@@ -61,7 +66,13 @@ class TableService {
             const ws = journal.addWorksheet(s);
             ws.getRow(1).values = this.dateCheck(now.getDate(), now.getMonth() + 1, params.size);
             ws.getColumn(1).values = params.students;
+            ws.getColumn(1).width = 30
+            for(let i = 2; i < params.size+2; i++) {
+                ws.getColumn(i).width = 7;
+            }
         });
+
+        journal.title = name;
 
         await journal.xlsx.writeFile(`${name}.xlsx`);
         var body;
@@ -107,34 +118,55 @@ class TableService {
           req.end();   */
     }
 
-    async setMark(journalName, subject, student, mark) {
-        const journal = new ExcelJS.Workbook;
-        // journal.xlsx.readFile(`${journalName}.xlsx`);
-        journal.xlsx.readFile("C:/Users/the_best/Desktop/Enterprise Developer/SchoolJournal/WorkWithTables/test.xlsx").then(() => {
-            console.log(journal.title);
-
-        journal.worksheets.forEach(ws => {
-            if (ws.name == subject) {
-                ws.getColumn(1).eachCell((cell) => {
-                    if (cell.text == student) {
-                        ws.getRow(cell.row).eachCell((cell) => {
-                            if (cell.text.substring(0,2).includes(new Date().getDay())) {
-                                cell.text = mark;
-                                
-                                journal.xlsx.writeFile(`${journalName}.xlsx`); //remove later, here just for tests
-
-                                return {
-                                    res: "Mark set successfully!"
-                                }
+    async setMark(journalName, subject, student, mark, date) {
+        const result = this.initWorkbook(journalName)
+        .then(function (journal) {
+            journal.eachSheet(ws => {
+                if (ws.name == subject) {
+                    ws.getColumn(1).eachCell((cell) => {
+                        if (cell.text == student) {
+                            if(!date) {
+                                const now = new Date();
+                                const day = now.getDate();
+                                const month = now.getMonth() + 1;
+                                date = `${day > 9 ? day : "0"+day}.${month > 9 ? month : "0"+month}`;
                             }
-                        })
-                    }
-                });
-                throw new Error("This student does not exist!");
-            }
+                            ws.getRow(1).eachCell((cell2) => {
+                                if (cell2.text == date) {
+                                    ws.getCell(cell.row, cell2.col).value = mark;
+                                }
+                            })
+                        }
+                    });
+                    //throw new Error("This student does not exist!");
+                }
+            });
+            journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(function () {
+                return "Success!";
+             });
+            //throw new Error("This page does not exist!");
         });
-        throw new Error("This page does not exist!");
-        })
+        return {
+            res: result
+        }
+    }
+
+    async addStudent(journalName, student) {
+        const result = this.initWorkbook(journalName)
+        .then(function (journal) {
+            if (!journal.getWorksheet(1).getColumn(1).values.includes(student)) {
+                journal.eachSheet(ws => {
+                    ws.lastRow.getCell(1).value = student;
+                });
+            } else throw new Error("This student already exists!");
+
+            journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(function () {
+                return "Success!";
+            });
+        });
+        return {
+            res: result
+        }
     }
 
     /*async login(userType) {

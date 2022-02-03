@@ -11,11 +11,19 @@ class TableController {
     
     async setMark(req, res, next) {
         try {
-            const {subject, student, mark} = req.body;
-            const result = await tableService.setMark(req.query.journal_name, subject, student, mark);
+            const {subject, student, mark, date} = req.body;
+            const result = await tableService.setMark(req.query.journal_name, subject, student, mark, date);
             return res.json({result});
         } catch (e) {next(e);}
     }
+
+    async addStudent(req, res, next) {
+        try {
+            const {student} = req.body;
+            const result = await tableService.setMark(req.query.journal_name, student);
+            return res.json({result});
+        } catch (e) {next(e);}
+    } 
 
     /*
     async login(req, res, next) {
