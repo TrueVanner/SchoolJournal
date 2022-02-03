@@ -3,6 +3,7 @@ const fs = require("fs");
 const ExcelJS = require('exceljs');
 
 const http = require("http");
+const { WebSocketShard } = require("discord.js");
 
 class TableService {
     dateCheck(day, month, n) {
@@ -35,7 +36,7 @@ class TableService {
             params = {
                 subjects: ["Algebra", "Geometry", "English", "Physics", "P.E"],
                 students: [null, "Василь", "Петро", "Тарас", "Єгор"],
-                size: 14
+                page_size: 14
             }
         }
         const now = new Date();
@@ -156,7 +157,7 @@ class TableService {
         .then(function (journal) {
             if (!journal.getWorksheet(1).getColumn(1).values.includes(student)) {
                 journal.eachSheet(ws => {
-                    ws.lastRow.getCell(1).value = student;
+                    ws.addRow([student]);
                 });
             } else throw new Error("This student already exists!");
 

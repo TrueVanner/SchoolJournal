@@ -5,7 +5,7 @@ const authMiddleware = require("../Middlewares/authMiddleware");
 
 const router = new Router();
 
-router.post("/create", contoller.create);
+router.post("/createJournal", contoller.create);
 router.post("/setMark", authMiddleware, contoller.setMark);
 router.post("/addStudent", authMiddleware, contoller.addStudent);
 //router.post("/add", contoller.add);

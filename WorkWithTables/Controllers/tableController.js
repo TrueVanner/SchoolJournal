@@ -20,10 +20,10 @@ class TableController {
     async addStudent(req, res, next) {
         try {
             const {student} = req.body;
-            const result = await tableService.setMark(req.query.journal_name, student);
+            const result = await tableService.addStudent(req.query.journal_name, student);
             return res.json({result});
         } catch (e) {next(e);}
-    } 
+    }
 
     /*
     async login(req, res, next) {
