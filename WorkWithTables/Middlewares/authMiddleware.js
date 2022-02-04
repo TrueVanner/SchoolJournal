@@ -6,7 +6,7 @@ module.exports = (req, res, next) => {
 //         const accessToken = authHeader.split(" ")[1];
 //         if (!accessToken) throw new Error("Auth token is empty!");
 
-//         const userData = await fetch(new Request("localhost:3000/auth/validateToken", {method:"GET", body: {token: token}}));
+//         const userData = 
 //         if (!userData) throw new Error("Invalid token!");
 
 //         req.user = userData;

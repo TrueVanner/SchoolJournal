@@ -35,65 +35,50 @@ class TableService {
         if (!params) {
             params = {
                 subjects: ["Algebra", "Geometry", "English", "Physics", "P.E"],
-                students: [null, "Василь", "Петро", "Тарас", "Єгор"],
+                students: ["Василь", "Петро", "Тарас", "Єгор"],
                 page_size: 14
             }
         }
-        const now = new Date();
+        params.students.unshift(null);
 
-        /*
-        const table = [];
-        const data = [];
-        
-    
-        data[0] = this.dateCheck(now.getDate(), now.getMonth() + 1, params.size);
-    
-        for (let student of params.students) {
-            data.push([student]);
-        }
-        for (let subject of params.subjects) {
-            table.push({name: subject, data: data})
-        }
-        const buffer = xlsx.build(table);
-        // fs.writeFile(`${process.env.JOURNAL_DIRECTORY}/${name}.xlsx`, buffer, (err) => {
-        //     if (err) throw err;
-        // });
-        fs.writeFile(`${name}.xlsx`, buffer, (err) => {
-            if (err) throw err;
-        }); */
+        const now = new Date();
 
         const journal = new ExcelJS.Workbook();
         params.subjects.forEach(s => {
             const ws = journal.addWorksheet(s);
-            ws.getRow(1).values = this.dateCheck(now.getDate(), now.getMonth() + 1, params.size);
+            ws.getRow(1).values = this.dateCheck(now.getDate(), now.getMonth() + 1, params.page_size);
             ws.getColumn(1).values = params.students;
             ws.getColumn(1).width = 30
-            for(let i = 2; i < params.size+2; i++) {
+            for(let i = 2; i < params.page_size+2; i++) {
                 ws.getColumn(i).width = 7;
             }
         });
 
         journal.title = name;
 
-        await journal.xlsx.writeFile(`${name}.xlsx`);
-        var body;
+        return journal.xlsx.writeFile(`${name}.xlsx`).then(function() {
 
-        //var client = http.createClient()
+            //var client = http.createClient()
 
-        // const req = http.request({
-        //     "hostname": "localhost",
-        //     "post": "3000",
-        //     "path": "/auth/login",
-        //     "method": "POST",
-        //     "headers": {
-        //         "user_type": "teacher",
-        //         "journal_name": name
-        //     }
-        // });
-        // req.end();
-        // req.on("response", (res) => {
-        //     console.log(res);
-        // })
+            const req = http.request({
+                "hostname": "localhost",
+                "port": 3000,
+                "path": "/auth/login",
+                "method": "POST",
+                "headers": {
+                    "user_type": "teacher",
+                    //"journal_name": name
+                }
+            });
+            req.end();
+            req.on("response", (res) => {
+                // return {
+                //     res: `New journal with a name \"${name}.xlsx\" created successfully!`,
+                //     token: res.body
+                // }
+            })
+        })
+        
 
        /* const options = {
             hostname: 'localhost',
@@ -120,7 +105,7 @@ class TableService {
     }
 
     async setMark(journalName, subject, student, mark, date) {
-        const result = this.initWorkbook(journalName)
+        return this.initWorkbook(journalName)
         .then(function (journal) {
             journal.eachSheet(ws => {
                 if (ws.name == subject) {
@@ -142,18 +127,16 @@ class TableService {
                     //throw new Error("This student does not exist!");
                 }
             });
-            journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(function () {
+            return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
                 return "Success!";
-             });
+            })
+            
             //throw new Error("This page does not exist!");
         });
-        return {
-            res: result
-        }
     }
 
     async addStudent(journalName, student) {
-        const result = this.initWorkbook(journalName)
+        return this.initWorkbook(journalName)
         .then(function (journal) {
             if (!journal.getWorksheet(1).getColumn(1).values.includes(student)) {
                 journal.eachSheet(ws => {
@@ -161,13 +144,10 @@ class TableService {
                 });
             } else throw new Error("This student already exists!");
 
-            journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(function () {
+            return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
                 return "Success!";
             });
         });
-        return {
-            res: result
-        }
     }
 
     /*async login(userType) {
