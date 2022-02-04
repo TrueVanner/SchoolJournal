@@ -3,8 +3,9 @@ const tableService = require("../Services/tableService.js");
 class TableController {
     async create(req, res, next) {
         try {
-            const {name, params} = req.body;
-            const result = await tableService.create(name, params);
+            const {name} = req.body;
+            const {subjects, students, starting_date, page_size} = req.body.params;
+            const result = await tableService.create(name, subjects, students, starting_date, page_size);
             return res.json({result});
         } catch (e) {next(e);}
     }

@@ -1,4 +1,5 @@
 require("dotenv").config();
+const Logger = require("../Utils/Logger");
 const express = require("express");
 
 const tableRouter = require("./Routers/tableRouter.js");
@@ -21,7 +22,7 @@ app.get('/table/getJournal', function(req, res){
 const start = async () => {
     try {
         app.listen(PORT, () => {
-            console.log("Server started, port = " + PORT);
+            Logger.serverStart(PORT);
         });
     } catch (e) {console.log(e)}
 }
