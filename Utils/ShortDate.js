@@ -20,8 +20,8 @@ module.exports = class ShortDate {
     }
 
     userFriendly() {
-        if (this.day < 9 && !this.day.includes("0")) this.day = "0" + this.day;
-        if (this.month < 9 && !this.month.includes("0")) this.month = "0" + this.month;
+        if (this.day < 10 && !this.day.includes("0")) this.day = "0" + this.day;
+        if (this.month < 10 && !this.month.includes("0")) this.month = "0" + this.month;
 
         return this;
     }
@@ -34,6 +34,8 @@ module.exports = class ShortDate {
     }
 
     relativeTo(shortDate) {
+        this.noZeros();
+        shortDate.noZeros();
         return (this.month != shortDate.month ? Math.sign(this.month - shortDate.month) : Math.sign(this.day - shortDate.day))
     }
 

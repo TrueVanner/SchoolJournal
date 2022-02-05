@@ -3,8 +3,15 @@ const authService = require("../Services/authService.js");
 class AuthController {
     async login(req, res, next) {
         try {
-            const {user_type, journal} = req.query;
-            const result = await authService.login(user_type, journal);
+            const {data, user_type, journal} = req.query;
+            var result;
+            if (data) 
+                result = await authService.login(data);
+            else
+                result = await authService.login(JSON.stringify({
+                    user_type: user_type,
+                    journal: journal
+                }));
             return res.json({result});
         } catch (e) {next(e);}
     }

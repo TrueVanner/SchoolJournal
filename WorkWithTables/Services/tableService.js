@@ -48,6 +48,22 @@ class TableService {
     }
 
     /**
+     * To avoid code dublication.
+     * @param {ExcelJS.Worksheet} ws
+     */
+    setMarkFinal(ws, date, mark, studentPos, pageSize) {
+        var status = "Unknown error 2!";
+        ws.getRow(1).eachCell((cell) => {
+            if (cell.text == date) {
+                ws.getCell(studentPos, cell.col).value = mark;
+                ws.getCell(studentPos, pageSize + 3).value = this.average(ws.getRow(studentPos).values.slice(2, pageSize));
+                status = "Success!"
+            }
+        });
+        return status;
+    }
+
+    /**
      * Was supposed to be able to send requests to any path of localhost:3000 (SmallAuth), works but 
      * I am unable to write anything in the request, which makes the whole thing useless.
      * @param {String} path - adress in localhost:3000
@@ -64,7 +80,8 @@ class TableService {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(data)
+                'Content-Length': Buffer.byteLength(data),
+                'data': data
             }
         }, res => {
             res.setEncoding('utf8');
@@ -72,7 +89,7 @@ class TableService {
             res.on('end', () => resolve(body));
         })
         req.on("error", () => reject)
-        req.write(data);
+        //req.write(data);
         req.end();
         });
     };
@@ -80,28 +97,30 @@ class TableService {
     /**
      * Creates a new page in the specified journal according to the journal format.
      */
-    createNewJournalPage(journal, subject, students) {
+    createNewJournalPage(journal, subject, students, startingDate) {
         const pageSize = parseInt(journal.keywords.split(" ")[0]);
 
         const ws = journal.addWorksheet(subject);
-        ws.getRow(1).values = this.pageDate(new ShortDate(journal.keywords.split(" ")[1]), pageSize);
+        ws.getRow(1).values = this.pageDate(startingDate, pageSize);
         ws.getColumn(1).values = students;
         ws.getColumn(1).width = 30;
         for(let i = 2; i < pageSize+2; i++) {
             ws.getColumn(i).width = 7;
         }
         ws.getRow(1).getCell(pageSize + 3).value = "Average"
+
+        return ws;
     }
 
     /**
      * When creating a subject page dublicate, 
      * @param {String} subject - subject name to find dublicates of
-     * 
+     * @param {ExcelJS.Workbook} journal
      */
     checkDublicates(journal, subject) {
         var res = 0;
         journal.eachSheet((ws) => {
-            if (ws.contains(subject)) res++;
+            if (ws.name.includes(subject)) res++;
         });
         return `${subject} (${res + 1})`;
     }
@@ -142,7 +161,7 @@ class TableService {
         journal.title = name;
 
         init.subjects.forEach(subject => {
-            this.createNewJournalPage(journal, subject, init.students);
+            this.createNewJournalPage(journal, subject, init.students, new ShortDate(init.staringDate).noZeros());
         });
 
         return journal.xlsx.writeFile(`${name}.xlsx`).then(function() {
@@ -151,7 +170,7 @@ class TableService {
             //     user_type: "teacher",
             //     journal_name: name
             // }));
-            // return JSON.parse(body);
+            // return body;
         });
     }
 
@@ -163,40 +182,47 @@ class TableService {
      * @returns status of the operation
      */
     async setMark(journalName, subject, student, mark, date) {
-        var success = false;
+        var status = "Unknown error!";
         var that = this; //how to call class functions from a promise?
         
+        if(!date) {
+            date = ShortDate.today();
+        } else date = new ShortDate(date);
+
+        date.userFriendly().toString();
 
         return this.initWorkbook(journalName)
         .then(function (journal) {
             const pageSize = parseInt(journal.keywords.split(" ")[0]);
+            const students = journal.getWorksheet(1).getColumn(1).values;
+            var studentPos, lastDate;
+
+            if (!students.includes(student)) {
+                status = "This student does not exist!";
+                return status;
+            }
+            else 
+                studentPos = students.indexOf(student);
+            
             journal.eachSheet(ws => {
                 if (ws.name.includes(subject)) {
-                    ws.getColumn(1).eachCell((cell1) => {
-                        if (cell1.text == student) {
-                            if(!date) {
-                                date = ShortDate.today();
-                            } else date = new ShortDate(date);
-                            if (date.relativeTo(new ShortDate(ws.getCell(1, pageSize + 1).text)) <= 0) { //if the date is within the page's last date
-                                ws.getRow(1).eachCell((cell2) => {
-                                    if (cell2.text == date.userFriendly().toString()) {
-                                        ws.getCell(cell1.row, cell2.col).value = mark;
-                                        ws.getCell(cell1.row, pageSize + 3).value = that.average(ws.getRow(cell1.row).values.slice(2, pageSize));
-                                        success = true;
-                                    }
-                                });
-                            }
-                        } 
-                    });
-                    //if (!success) success = "This student doesn't exist!";
+                    lastDate = new ShortDate(ws.getCell(1, pageSize + 1).text);
+                    if (date.relativeTo(lastDate) <= 0) { //if the date is within the page's last date
+                        status = that.setMarkFinal(ws, date.userFriendly().toString(), mark, studentPos, pageSize);
+                    }
                 }
             });
-            if (success == false) {
-                that.createNewJournalPage(journal, that.checkDublicates(journal, subject), journal.getWorksheet(1).getColumn(1).values)
+            if (status == "Unknown error!") {
+                var ws;
+                while (date.relativeTo(lastDate) > 0) {
+                    ws = that.createNewJournalPage(journal, that.checkDublicates(journal, subject), students, lastDate);
+                    lastDate = new ShortDate(ws.getCell(1, pageSize + 1).text);
+                }
+                status = that.setMarkFinal(ws, date, mark, studentPos, pageSize);
             }
 
             return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
-                return (success == true ? "Success!" : success)
+                return status;
             })
         });
     }

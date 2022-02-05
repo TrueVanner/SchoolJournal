@@ -1,7 +1,8 @@
 const tokenService = require("./tokenService");
 
 class AuthService {
-    async login(userType, journal) {
+    async login(data) {
+        console.log(data);
         const token = tokenService.generateToken({
             user_type: userType,
             journal_name: journal
