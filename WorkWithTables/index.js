@@ -15,7 +15,7 @@ app.use("/table", tableRouter);
 //app.use(authMiddleware);
 app.use(errMiddleware);
 
-app.get('/table/getJournal', function(req, res){
+app.get('/table/getJournal', authMiddleware, function(req, res){
     res.download(process.env.JOURNAL_DIRECTORY + req.query.journal_name + ".xlsx");
 });
 

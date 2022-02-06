@@ -11,30 +11,18 @@ const { fileURLToPath } = require("url");
 
 class TableService {
     /**
-     * Creates an array of ShortDates for the specified amount of days (page size)
+     * To avoid code dublcation.
      * 
-     * @param {ShortDate} date - starting date of the journal
-     * @param {number} n - basically page size
+     * @param {String} date - starting date of the journal in a form of a ShortDate string.
+     * @param {number} n - page size
      * @returns ShortDate array
      */
     pageDate(date, n) {
         const res = [null];
-        var day = date.day;
-        var month = date.month;
-
         for (let i = 0; i < n; i++) {
-            if (day > ([1, 3, 5, 7, 8, 10, 12].includes(month) ? 31 : (month == 2 ? 28 : 30))) {
-                day = 1;
-                month++;
-            }
-
-            if (month > 12) {
-                day == 1;
-                month == 1;
-            }
-
-            res.push(new ShortDate(`${day}.${month}`).userFriendly().toString());
-            day++;
+            date = new ShortDate(date.toString());
+            res.push(date.userFriendly());
+            date.addDay(1);
         }
         return res;
     }
@@ -44,7 +32,9 @@ class TableService {
      */
     initWorkbook(name) {
         const wb = new ExcelJS.Workbook;
-        return wb.xlsx.readFile(process.env.JOURNAL_DIRECTORY + name + ".xlsx");
+        if (fs.existsSync(process.env.JOURNAL_DIRECTORY + name + ".xlsx")) {
+            return wb.xlsx.readFile(process.env.JOURNAL_DIRECTORY + name + ".xlsx");
+        } else throw new Error("This journal does not exist!");
     }
 
     /**
@@ -96,12 +86,16 @@ class TableService {
 
     /**
      * Creates a new page in the specified journal according to the journal format.
+     * @param {ExcelJS.Workbook} journal
+     * @param {String} subject
+     * @param {Array<String>} students
+     * @param {ShortDate} startingDate
      */
     createNewJournalPage(journal, subject, students, startingDate) {
         const pageSize = parseInt(journal.keywords.split(" ")[0]);
 
         const ws = journal.addWorksheet(subject);
-        ws.getRow(1).values = this.pageDate(startingDate, pageSize);
+        ws.getRow(1).values = this.pageDate(startingDate.toString(), pageSize);
         ws.getColumn(1).values = students;
         ws.getColumn(1).width = 30;
         for(let i = 2; i < pageSize+2; i++) {
@@ -110,10 +104,11 @@ class TableService {
         ws.getRow(1).getCell(pageSize + 3).value = "Average"
 
         return ws;
+
     }
 
     /**
-     * When creating a subject page dublicate, 
+     * When creating a subject page dublicate, determines the number of the new page based on the previous ones.
      * @param {String} subject - subject name to find dublicates of
      * @param {ExcelJS.Workbook} journal
      */
@@ -164,7 +159,8 @@ class TableService {
             this.createNewJournalPage(journal, subject, init.students, new ShortDate(init.staringDate).noZeros());
         });
 
-        return journal.xlsx.writeFile(`${name}.xlsx`).then(function() {
+
+        return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + name + ".xlsx").then(function() {
             return `New journal with a name '${name}.xlsx' was created successfully!`
             // const body = that.httpRequest("/auth/login", JSON.stringify({
             //     user_type: "teacher",
@@ -178,47 +174,51 @@ class TableService {
     /**
      * Sets a mark for the student in the specified journal. One student can only get one mark per day (per subject).
      * To change a mark, simply add a new one on the same date.
-     * @param {ShortDate (String)} date - the date when the mark should be placed on. Current date is the default.
+     * @param {ShortDate} date - is a String. It's the date when the mark should be placed on, current date is the default.
      * @returns status of the operation
      */
     async setMark(journalName, subject, student, mark, date) {
         var status = "Unknown error!";
-        var that = this; //how to call class functions from a promise?
-        
-        if(!date) {
-            date = ShortDate.today();
-        } else date = new ShortDate(date);
-
-        date.userFriendly().toString();
+        var that = this; //how to call class functions from a promise?    
 
         return this.initWorkbook(journalName)
         .then(function (journal) {
+            if(!date) {
+                date = ShortDate.today();
+            } else { 
+                date = new ShortDate(date);
+                if (date.relativeTo(new ShortDate(journal.keywords.split(" ")[1])) == -1) {
+                    return "Wrong date: it's earlier than the journal's starting date!"
+                }
+            }
+            date.userFriendly();
+
             const pageSize = parseInt(journal.keywords.split(" ")[0]);
             const students = journal.getWorksheet(1).getColumn(1).values;
             var studentPos, lastDate;
 
             if (!students.includes(student)) {
-                status = "This student does not exist!";
-                return status;
+                return "This student does not exist!";
             }
             else 
                 studentPos = students.indexOf(student);
             
             journal.eachSheet(ws => {
                 if (ws.name.includes(subject)) {
+                    
                     lastDate = new ShortDate(ws.getCell(1, pageSize + 1).text);
                     if (date.relativeTo(lastDate) <= 0) { //if the date is within the page's last date
-                        status = that.setMarkFinal(ws, date.userFriendly().toString(), mark, studentPos, pageSize);
+                        status = that.setMarkFinal(ws, date.userFriendly(), mark, studentPos, pageSize);
                     }
                 }
             });
-            if (status == "Unknown error!") {
+            if (status == "Unknown error!") { //shows that the only problem is the absence of specified date within the existing set of pages.
                 var ws;
                 while (date.relativeTo(lastDate) > 0) {
-                    ws = that.createNewJournalPage(journal, that.checkDublicates(journal, subject), students, lastDate);
+                    ws = that.createNewJournalPage(journal, that.checkDublicates(journal, subject), students, lastDate.addDay(1));
                     lastDate = new ShortDate(ws.getCell(1, pageSize + 1).text);
                 }
-                status = that.setMarkFinal(ws, date, mark, studentPos, pageSize);
+                status = that.setMarkFinal(ws, date.userFriendly(), mark, studentPos, pageSize);
             }
 
             return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
@@ -241,6 +241,23 @@ class TableService {
                     success = true;
                 });
             }
+
+            return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
+                return (success ? "Success!" : "This student already exists!")
+            });
+        });
+    }
+    
+    async removeStudent(journalName, student) {
+        var status = "Unknown error!"
+        return this.initWorkbook(journalName)
+        .then(function (journal) {
+            if (journal.getWorksheet(1).getColumn(1).values.includes(student)) {
+                journal.eachSheet(ws => {
+                    ws.addRow([student]);
+                    success = true;
+                });
+            } else return "This student does not exist!"
 
             return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
                 return (success ? "Success!" : "This student already exists!")
