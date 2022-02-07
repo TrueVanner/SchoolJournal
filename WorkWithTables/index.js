@@ -12,7 +12,7 @@ const app = express();
 app.use(express.json());
 
 app.use("/table", tableRouter);
-//app.use(authMiddleware);
+app.use(authMiddleware);
 app.use(errMiddleware);
 
 app.get('/table/getJournal', authMiddleware, function(req, res){

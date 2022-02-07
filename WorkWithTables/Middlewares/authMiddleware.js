@@ -1,7 +1,7 @@
 //const tableMiddleware = require("../Services/tableService")
 
 /**
- * Was supposed to check the token and save user data. Development ended due to "tableMiddleware.httpRequest" not working.
+ * Was supposed to check the token and check user data. Development ended due to "tableMiddleware.httpRequest" not working.
  */
 
  module.exports = (req, res, next) => {

@@ -26,24 +26,42 @@ class TableController {
         } catch (e) {next(e);}
     }
 
-    /*
-    async login(req, res, next) {
+    async removeStudent(req, res, next) {
         try {
-            const {user_type} = req.body;
-            const result = await authService.login(user_type);
+            const {student} = req.body;
+            const result = await tableService.removeStudent(req.query.journal_name, student);
+            return res.json({result});
+        } catch (e) {next(e);}
+    }
+    async updateStudent(req, res, next) {
+        try {
+            const {old_student, new_student} = req.body;
+            const result = await tableService.updateStudent(req.query.journal_name, old_student, new_student);
             return res.json({result});
         } catch (e) {next(e);}
     }
 
-    async validateT(req, res, next) {
+    async addSubject(req, res, next) {
         try {
-            const {token} = req.body;
-            const result = await authService.validateT(token);
-
+            const {subject} = req.body;
+            const result = await tableService.addSubject(req.query.journal_name, subject);
             return res.json({result});
         } catch (e) {next(e);}
-    }*/
-
+    }
+    async removeSubject(req, res, next) {
+        try {
+            const {subject} = req.body;
+            const result = await tableService.removeSubject(req.query.journal_name, subject);
+            return res.json({result});
+        } catch (e) {next(e);}
+    }
+    async updateSubject(req, res, next) {
+        try {
+            const {old_subject, new_subject} = req.body;
+            const result = await tableService.updateSubject(req.query.journal_name, old_subject, new_subject);
+            return res.json({result});
+        } catch (e) {next(e);}
+    }
 }
 
 module.exports = new TableController();

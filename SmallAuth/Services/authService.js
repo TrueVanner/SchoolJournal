@@ -1,11 +1,15 @@
 const tokenService = require("./tokenService");
 
 class AuthService {
-    async login(data) {
-        console.log(data);
+    /**
+     * The user was supposed to specify the journal to change, and then be able to perform all functions without
+     * entering the journal name, using the token. Didn't finish the thing due to the lack of time.
+     * @param {*} data 
+     * @returns 
+     */
+    async login(journalName) {
         const token = tokenService.generateToken({
-            user_type: userType,
-            journal_name: journal
+            journal_name: journalName
         });
         
         return {

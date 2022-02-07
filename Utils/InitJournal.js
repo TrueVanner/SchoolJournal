@@ -1,3 +1,5 @@
+//This class is only used when creating a new journal. Its main purpose is to fill up the params, which weren't specified during creation, with default values.
+
 const ShortDate = require("./ShortDate");
 
 module.exports = class InitJournal {

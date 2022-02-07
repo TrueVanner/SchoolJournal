@@ -1,13 +1,10 @@
 const fs = require("fs");
-
 const ExcelJS = require('exceljs');
-
 const http = require("http");
 
 const InitJournal = require("../../Utils/InitJournal");
 const ShortDate = require("../../Utils/ShortDate");
 const Logger = require("../../Utils/Logger");
-const { fileURLToPath } = require("url");
 
 class TableService {
     /**
@@ -162,8 +159,7 @@ class TableService {
 
         return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + name + ".xlsx").then(function() {
             return `New journal with a name '${name}.xlsx' was created successfully!`
-            // const body = that.httpRequest("/auth/login", JSON.stringify({
-            //     user_type: "teacher",
+            // const body = that.httpRequest("/auth/login", JSON.stringify
             //     journal_name: name
             // }));
             // return body;
@@ -228,39 +224,151 @@ class TableService {
     }
 
     /**
-     * Adds a new student, if he doesn't already exist. A student can have any desirable name
-     * @returns status of the operation
+     * Adds a new student to the journal. A student can have any desirable name.
+     * @param {String} journalName 
+     * @param {String} student - name of the new student
+     * @returns status of the operation.
      */
     async addStudent(journalName, student) {
-        var success = false;
+        var status = "Unknown error!"
         return this.initWorkbook(journalName)
         .then(function (journal) {
             if (!journal.getWorksheet(1).getColumn(1).values.includes(student)) {
                 journal.eachSheet(ws => {
                     ws.addRow([student]);
-                    success = true;
+                    status = "Success!";
                 });
-            }
+            } else return "This student already exists!"
 
             return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
-                return (success ? "Success!" : "This student already exists!")
+                return status;
             });
         });
     }
     
+    /**
+     * Removes a student from the journal 
+     * @param {String} journalName 
+     * @param {String} student - name of the student to remove
+     * @returns status of the operation.
+     */
     async removeStudent(journalName, student) {
         var status = "Unknown error!"
         return this.initWorkbook(journalName)
         .then(function (journal) {
-            if (journal.getWorksheet(1).getColumn(1).values.includes(student)) {
+            const students = journal.getWorksheet(1).getColumn(1).values;
+            if (students.includes(student)) {
                 journal.eachSheet(ws => {
-                    ws.addRow([student]);
-                    success = true;
+                    ws.spliceRows(students.indexOf(student), 1);
+                    status = "Success!";
                 });
             } else return "This student does not exist!"
 
             return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
-                return (success ? "Success!" : "This student already exists!")
+                return status;
+            });
+        });
+    }
+    
+    /**
+     * Updates a student from the database
+     * @param {String} journalName 
+     * @param {String} student - old student name
+     * @param {String} newStudent - new student name
+     * @returns status of the operation.
+     */
+    async updateStudent(journalName, student, newStudent) {
+        var status = "Unknown error!"
+        return this.initWorkbook(journalName)
+        .then(function (journal) {
+            const students = journal.getWorksheet(1).getColumn(1).values;
+            if (students.includes(student)) {
+                journal.eachSheet(ws => {
+                    ws.getRow(students.indexOf(student)).getCell(1).value = newStudent;
+                    status = "Success!";
+                });
+            } else return "This student does not exist!"
+
+            return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
+                return status;
+            });
+        });
+    }
+    
+    /**
+     * Adds a new subject to the journal, creating a page formatted the same way as all the other ones
+     * @param {String} journalName 
+     * @param {String} subject - name of the subject to add
+     * @returns status of the operation.
+     */
+    async addSubject(journalName, subject) {
+        var status = "Unknown error!"
+        var that = this;
+
+        if (!subject) return "No subject name!";
+
+        return this.initWorkbook(journalName)
+        .then(function (journal) {
+            journal.eachSheet(ws => {
+                if (ws.name == subject) status = "This subject already exists!"
+            });
+            if (status != "This subject already exists!") {
+                that.createNewJournalPage(journal, subject, journal.getWorksheet(1).getColumn(1).values, new ShortDate(journal.keywords.split(" ")[1]));
+                status = "Success!";
+            }
+
+            return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
+                return status;
+            });
+        });
+    }
+    
+    /**
+     * Removes all subject pages from the journal. When selecting pages by names, will only take the originals ("English"),
+     * and copies ("English (1)"), ignoring any other formats (Like "Grammar(English)", which some teachers might create)
+     * @param {String} journalName 
+     * @param {String} subject - name of the subject to remove
+     * @returns status of the operation.
+     */
+    async removeSubject(journalName, subject) {
+        var status = "This subject does not exist!"
+
+        return this.initWorkbook(journalName)
+        .then(function (journal) {
+            journal.eachSheet(ws => {
+                if (ws.name == subject || ws.name.includes(`${subject} (`)) {  // all pages and copies ("English" and "English (1)"), 
+                    journal.removeWorksheet(ws.id);                            //not including pages like "Grammar(English)"", which some teachers might create
+                    status = "Success!"; // success if at least one page was removed
+                }
+            });
+
+            return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
+                return status;
+            });
+        });
+    }
+    
+    /**
+     * Updates all subject pages with a new name. Data within remains unchanged.
+     * @param {String} journalName 
+     * @param {String} subject - old subject name
+     * @param {String} newSubject - new subject name
+     * @returns status of the operation.
+     */
+    async updateSubject(journalName, subject, newSubject) {
+        var status = "This subject does not exist!"
+
+        return this.initWorkbook(journalName)
+        .then(function (journal) {
+            journal.eachSheet(ws => {
+                if (ws.name == subject || ws.name.includes(`${subject} (`)) {
+                    ws.name = ws.name.replace(subject, newSubject);
+                    status = "Success!"; // success if at least one page was updated
+                }
+            });
+
+            return journal.xlsx.writeFile(process.env.JOURNAL_DIRECTORY + journalName + ".xlsx").then(() => {
+                return status;
             });
         });
     }
