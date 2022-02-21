@@ -144,7 +144,9 @@ class TableService {
      * @returns status of the operation
      */
     async create(name, subjects, students, starting_date, page_size) {
+        if (fs.existsSync(process.env.JOURNAL_DIRECTORY + name + ".xlsx")) return "The journal with this name already exists!";
         const init = new InitJournal(name, subjects, students, starting_date, page_size);
+        console.log(init)
         init.students.unshift(null);
 
         const journal = new ExcelJS.Workbook();
@@ -371,6 +373,24 @@ class TableService {
                 return status;
             });
         });
+    }
+
+
+    async getStudents(journalName) {
+        return this.initWorkbook(journalName).then((journal) => {
+            return journal.getWorksheet(1).getColumn(1).values.slice(2);
+        })
+    }
+    async getSubjects(journalName) {
+        let arr = [];
+        return this.initWorkbook(journalName).then((journal) => {
+            journal.eachSheet((sheet) => {
+                arr.push(sheet.name);
+            })
+            return arr;
+        });
+
+        
     }
 }
 
