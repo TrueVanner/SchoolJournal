@@ -1,3 +1,8 @@
+/**
+Important note: this logger does not belong to me. It was made by user @Setredid.
+*/
+
+
 // How to call logger
 // Logger.<TYPE OF ERROR>(<PARAMS>);
 
