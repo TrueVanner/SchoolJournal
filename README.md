@@ -1,6 +1,6 @@
 # SchoolJournal
  
-This API allows user to work with school journals, or xlsx tables, formed in a specific way.
+This API allows user to work with school journals, or xlsx tables, formed in a specific way. Created as a final project at YD programming school.
 Currently, such features are available:
 
  - logging in: 
